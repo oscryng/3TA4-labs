@@ -99,6 +99,7 @@ static void Error_Handler(void);
 
 void pushButtons_Init(void);
 void RTC_Config(void);
+void RTC_Update(void);
 void RTC_AlarmAConfig(void);
 void RTC_DateShow(RTC_HandleTypeDef *hrtc);
 
@@ -242,48 +243,7 @@ int main(void)
 						} 
 					}
 			}	
-/*			
-//==============================================================			
 
-//==============================================================					
-			if (selpressed==1)  {
-	
-					selpressed=0;
-			} 
-//==============================================================			
-
-//==============================================================		 
-			if (leftpressed==1) {
-							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"left");
-							
-					leftpressed=0;
-			}			
-//==============================================================			
-
-//==============================================================							
-			if (rightpressed==1) {
-							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"right");
-			
-					rightpressed=0;
-			}
-//==============================================================			
-			if (b1pressed==1) {
-
-										BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"b1");
-					b1pressed=0;
-			}
-//==============================================================						
-			if (b2pressed==1) {
-
-										BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"b2");
-					b2pressed=0;
-			}
-//==============================================================	
-*/	
 	switch (state) { 
 				
 				case showTime:
@@ -495,6 +455,7 @@ int main(void)
 							else if (b2pressed==1){
 									b2pressed=0;
 									state=showTime;
+									RTC_Update();
 								  RTC_AlarmA_IT_Enable(&RTCHandle);
 							}
 					break;
@@ -867,9 +828,9 @@ void pushButtons_Init(void){
 	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
 	GPIO_InitStruct.Pin = GPIO_PIN_12;
-	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	
 	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 	
@@ -887,6 +848,15 @@ void pushButtons_Init(void){
 	
 
 	
+}
+void RTC_Update(void){
+				RTC_DateStructure.Year = yy;
+				RTC_DateStructure.Month = mo;
+				RTC_DateStructure.Date = dd;
+				RTC_DateStructure.WeekDay = wd;
+				RTC_TimeStructure.Hours = hh;  
+				RTC_TimeStructure.Minutes = mm;
+				RTC_TimeStructure.Seconds = ss;
 }
 
 static void Error_Handler(void)

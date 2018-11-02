@@ -21,22 +21,23 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V2.0.18.0
 Dialog DLL:      TCM.DLL V1.27.0.0
  
 <h2>Project:</h2>
-C:\Users\oscar\Documents\University\Fourth Year\3TA4\lab3\lab3.uvprojx
+C:\Users\oscar\Documents\University\Fourth Year\3TA4\3TA4-labs\lab3\lab3.uvprojx
 Project File Date:  10/15/2018
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 4 (build 422)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'stm32L476DISCO'
+compiling stm32l4xx_it.c...
 compiling main.c...
-src\main.c(759): warning:  #940-D: missing return statement at end of non-void function "RTC_AlarmA_IT_Disable" 
+src\main.c(720): warning:  #940-D: missing return statement at end of non-void function "RTC_AlarmA_IT_Disable" 
   }
-src\main.c(785): warning:  #940-D: missing return statement at end of non-void function "RTC_AlarmA_IT_Enable" 
+src\main.c(746): warning:  #940-D: missing return statement at end of non-void function "RTC_AlarmA_IT_Enable" 
   }
-src\main.c(892): warning:  #177-D: function "Error_Handler"  was declared but never referenced
+src\main.c(862): warning:  #177-D: function "Error_Handler"  was declared but never referenced
   static void Error_Handler(void)
 src\main.c: 3 warnings, 0 errors
 linking...
-Program Size: Code=12936 RO-data=580 RW-data=80 ZI-data=1256  
+Program Size: Code=13016 RO-data=580 RW-data=80 ZI-data=1256  
 FromELF: creating hex file...
 ".\Objects\lab3.axf" - 0 Error(s), 3 Warning(s).
 
@@ -50,18 +51,18 @@ Package Vendor: ARM
 
 Package Vendor: Keil
                 http://www.keil.com/pack/Keil.MDK-Middleware.7.7.0.pack
-                ::Board Support:LED:1.0.0 (API)
+                ::Board Support:Buttons:1.0.0 (API)
                 Middleware for Keil MDK-Professional and MDK-Plus
-   * Component: LED Version: 1.0.0
    * Component: Buttons Version: 1.0.0
+   * Component: LED Version: 1.0.0
 
 Package Vendor: Keil
                 http://www.keil.com/pack/Keil.STM32L4xx_DFP.1.4.0.pack
-                Keil.STM32L476G-EVAL::Board Support:LED:1.0.0
+                Keil::Device:Startup:1.2.0
                 STMicroelectronics STM32L4 Series Device Support, Drivers and Examples
+   * Component: Startup Version: 1.2.0
    * Component: LED Version: 1.0.0
    * Component: Buttons Version: 1.0.0
-   * Component: Startup Version: 1.2.0
 
 <h2>Collection of Component include folders:</h2>
   .\RTE\_stm32L476DISCO
@@ -73,22 +74,22 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE:5.1.2
 
+   * Component: ::Board Support:Buttons:1.0.0 (API)
+      Include file:  Board\Board_Buttons.h
+
    * Component: ::Board Support:LED:1.0.0 (API)
       Include file:  Board\Board_LED.h
 
-   * Component: ::Board Support:Buttons:1.0.0 (API)
-      Include file:  Board\Board_Buttons.h
+   * Component: Keil::Device:Startup:1.2.0
+      Source file:   Device\Source\ARM\startup_stm32l476xx.s
+      Source file:   Device\Source\system_stm32l4xx.c
 
    * Component: Keil.STM32L476G-EVAL::Board Support:LED:1.0.0
       Source file:   Boards\ST\STM32L476G-EVAL\Common\LED_STM32L476G-EVAL.c
 
    * Component: Keil.STM32L476G-EVAL::Board Support:Buttons:1.0.0
       Source file:   Boards\ST\STM32L476G-EVAL\Common\Buttons_STM32L476G-EVAL.c
-
-   * Component: Keil::Device:Startup:1.2.0
-      Source file:   Device\Source\system_stm32l4xx.c
-      Source file:   Device\Source\ARM\startup_stm32l476xx.s
-Build Time Elapsed:  00:00:09
+Build Time Elapsed:  00:00:10
 </pre>
 </body>
 </html>
