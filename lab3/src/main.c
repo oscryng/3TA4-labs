@@ -64,6 +64,7 @@ NOTE: students can also configure the TimeStamp pin
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef  pI2c_Handle;
+HAL_StatusTypeDef EE_status;
 
 RTC_HandleTypeDef RTCHandle;
 RTC_DateTypeDef RTC_DateStructure;
@@ -99,6 +100,7 @@ static void Error_Handler(void);
 
 void pushButtons_Init(void);
 void RTC_Config(void);
+void RTC_Update(void);
 void RTC_AlarmAConfig(void);
 void RTC_DateShow(RTC_HandleTypeDef *hrtc);
 
@@ -165,7 +167,7 @@ int main(void)
 
 
 //*********************Testing I2C EEPROM------------------
-/*
+
 	//the following variables are for testging I2C_EEPROM
 	uint8_t data1 =0x67,  data2=0x68;
 	uint8_t readData=0x00;
@@ -226,7 +228,7 @@ int main(void)
 
 	HAL_Delay(1000);
 	
-*/
+
 
 //******************************testing I2C EEPROM*****************************	
 		
@@ -241,52 +243,12 @@ int main(void)
 					SEL_Pressed_StartTick=HAL_GetTick(); 
 					while(BSP_JOY_GetState() == JOY_SEL) {  //while the selection button is pressed)	
 						if ((HAL_GetTick()-SEL_Pressed_StartTick)>1000) {	
-									RTC_DateShow(&RTCHandle);
+									state = showDate;
+									break;
 						} 
 					}
 			}	
-/*			
-//==============================================================			
 
-//==============================================================					
-			if (selpressed==1)  {
-	
-					selpressed=0;
-			} 
-//==============================================================			
-
-//==============================================================		 
-			if (leftpressed==1) {
-							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"left");
-							
-					leftpressed=0;
-			}			
-//==============================================================			
-
-//==============================================================							
-			if (rightpressed==1) {
-							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"right");
-			
-					rightpressed=0;
-			}
-//==============================================================			
-			if (b1pressed==1) {
-
-										BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"b1");
-					b1pressed=0;
-			}
-//==============================================================						
-			if (b2pressed==1) {
-
-										BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"b2");
-					b2pressed=0;
-			}
-//==============================================================	
-*/	
 	switch (state) { 
 				
 				case showTime:
@@ -297,10 +259,15 @@ int main(void)
 							BSP_LCD_GLASS_DisplayString((uint8_t*)"set");
 							RTC_AlarmA_IT_Disable(&RTCHandle);
 			}
-	
-					
+					else if (b1pressed==1) {
+							b1pressed=0;
+							BSP_LCD_GLASS_Clear();
+							BSP_LCD_GLASS_DisplayString((uint8_t*)"b1");
+			}
 					break;
 				case showDate:
+							RTC_DateShow(&RTCHandle);
+							state = showTime;
 					break;
 				case setState:
 							if (leftpressed==1){
@@ -521,6 +488,8 @@ int main(void)
 							else if (b2pressed==1){
 									b2pressed=0;
 									state=showTime;
+									RTC_Update();							// update time before you go back to showTime
+									RTC_Config();							// have to reconfig
 								  RTC_AlarmA_IT_Enable(&RTCHandle);
 							}
 					break;
@@ -811,6 +780,7 @@ HAL_StatusTypeDef  RTC_AlarmA_IT_Enable(RTC_HandleTypeDef *hrtc)
 }
 
 
+
 /**
   * @brief EXTI line detection callbacks
   * @param GPIO_Pin: Specifies the pins connected EXTI line
@@ -894,9 +864,9 @@ void pushButtons_Init(void){
 	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
 	GPIO_InitStruct.Pin = GPIO_PIN_12;
-	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	
 	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 	
@@ -910,10 +880,19 @@ void pushButtons_Init(void){
 	HAL_NVIC_SetPriority((IRQn_Type)EXTI15_10_IRQn, 3, 0x00);
 	HAL_NVIC_EnableIRQ((IRQn_Type)EXTI15_10_IRQn);
 	
-	
-	
+}
 
-	
+
+
+
+void RTC_Update(void){
+				RTC_DateStructure.Year = yy;
+				RTC_DateStructure.Month = mo;
+				RTC_DateStructure.Date = dd;
+				RTC_DateStructure.WeekDay = wd;
+				RTC_TimeStructure.Hours = hh;  
+				RTC_TimeStructure.Minutes = mm;
+				RTC_TimeStructure.Seconds = ss;
 }
 
 static void Error_Handler(void)
