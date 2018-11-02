@@ -83,7 +83,7 @@ HAL_StatusTypeDef EE_status;
 //memory location to write to in the device
 __IO uint16_t memLocation = 0x000A; //pick any location within range
 
-  
+ 
 
 char lcd_buffer[6];    // LCD display buffer
 char timestring[10]={0};  //   
@@ -168,6 +168,7 @@ int main(void)
 	RTC_AlarmAConfig();
 	RTC_AlarmA_IT_Enable(&RTCHandle);
 	I2C_Init(&pI2c_Handle);
+	
 
 
 //*********************Testing I2C EEPROM------------------
@@ -827,6 +828,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 						break;
 	  } 
 }
+
 
 void RTC_TimeShow(RTC_HandleTypeDef *hrtc){
 	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);
