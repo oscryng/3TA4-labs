@@ -290,8 +290,12 @@ int main(void)
 					if (b2pressed==1) {
 							b2pressed=0;
 							state=setState;
+							BSP_LCD_GLASS_Clear();
+							BSP_LCD_GLASS_DisplayString((uint8_t*)"set");
 							RTC_AlarmA_IT_Disable(&RTCHandle);
 			}
+	
+					
 					break;
 				case showDate:
 					break;
@@ -439,19 +443,34 @@ int main(void)
 									switch (stState){
 										case second:
 											BSP_LCD_GLASS_Clear();
-											ss = (ss-1)%60;
+											if (ss == 0){
+												ss = 59;
+											}
+											else{
+												ss = (ss-1)%60;
+											}
 											sprintf(dString,"%u",ss); 
 											BSP_LCD_GLASS_DisplayString((uint8_t*)dString);
 											break;
 										case minute:
 											BSP_LCD_GLASS_Clear();
-											mm = (mm-1)%60;
+											if (mm == 0){
+												mm = 59;
+											}
+											else {
+												mm = (mm-1)%60;
+											}
 											sprintf(dString,"%u",mm); 
 											BSP_LCD_GLASS_DisplayString((uint8_t*)dString);
 											break;
 										case hour:
 											BSP_LCD_GLASS_Clear();
-											hh = (hh-1)%24;
+											if (hh == 0){
+												hh = 23; 
+											}
+											else {
+												hh = (hh-1)%24;
+											}
 											sprintf(dString,"%u",hh); 
 											BSP_LCD_GLASS_DisplayString((uint8_t*)dString);
 											break;
@@ -486,7 +505,11 @@ int main(void)
 											break;
 										case year:
 											BSP_LCD_GLASS_Clear();
-											yy = (yy-1)%100;
+											if (yy == 0){
+												yy = 99;
+											}else{
+												yy = (yy-1)%100;
+											}
 											sprintf(dString,"%u",yy); 
 											BSP_LCD_GLASS_DisplayString((uint8_t*)dString);
 											break;
