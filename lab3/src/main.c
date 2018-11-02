@@ -96,7 +96,7 @@ __IO uint32_t SEL_Pressed_StartTick;   //sysTick when the User button is pressed
 
 __IO uint8_t leftpressed, rightpressed, uppressed, downpressed, selpressed, b1pressed, b2pressed;  // button pressed 
 __IO uint8_t  sel_held;   // if the selection button is held for a while (>800ms)
-
+__IO uint8_t sLast;
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
@@ -172,7 +172,7 @@ int main(void)
 
 
 //*********************Testing I2C EEPROM------------------
-/*
+
 	//the following variables are for testging I2C_EEPROM
 	uint8_t data1 =0x67,  data2=0x68;
 	uint8_t readData=0x00;
@@ -234,7 +234,7 @@ int main(void)
 	HAL_Delay(1000);
 	
 
-*/
+
 //******************************testing I2C EEPROM*****************************	
 		
 
@@ -266,9 +266,13 @@ int main(void)
 			}
 					else if (b1pressed==1) {
 							b1pressed=0;
+							if (sLast == RTC_TimeStructure.Seconds){
+								break;
+							}
 							BSP_LCD_GLASS_Clear();
 							BSP_LCD_GLASS_DisplayString((uint8_t*)"SAVED");
 							EE_RecordTime(&RTCHandle);
+							sLast = RTC_TimeStructure.Seconds;
 							break;
 			}
 					else if (leftpressed==1){
@@ -817,10 +821,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			case GPIO_PIN_5:    //down button						
 							downpressed=1;
 							break;
-			case GPIO_PIN_12:    // button 1						
+			case GPIO_PIN_11:    // button 1						
 							b1pressed=1;
 							break;	
-			case GPIO_PIN_14:    // button 2					
+			case GPIO_PIN_15:    // button 2					
 							b2pressed=1;
 							break;	
 			default://
@@ -874,14 +878,14 @@ void pushButtons_Init(void){
 	
 	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_12;
+	GPIO_InitStruct.Pin = GPIO_PIN_11;
 	GPIO_InitStruct.Pull = GPIO_PULLUP;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	
 	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_14;
+	GPIO_InitStruct.Pin = GPIO_PIN_15;
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
