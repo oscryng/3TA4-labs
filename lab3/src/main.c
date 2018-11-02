@@ -77,6 +77,9 @@ typedef enum setTimeType{second,minute,hour,wkd,day,month,year} setTimeType;
 stateType state=showTime;
 setTimeType stState=second;
 
+I2C_HandleTypeDef  pI2c_Handle;
+HAL_StatusTypeDef EE_status;
+
 //memory location to write to in the device
 __IO uint16_t memLocation = 0x000A; //pick any location within range
 
@@ -104,6 +107,8 @@ void RTC_Update(void);
 void RTC_AlarmAConfig(void);
 void RTC_DateShow(RTC_HandleTypeDef *hrtc);
 
+HAL_StatusTypeDef EE_RecordTime(RTC_HandleTypeDef *hrtc);
+void EE_DisplayTime(RTC_HandleTypeDef *hrtc);
 
 
 /* Private functions ---------------------------------------------------------*/
@@ -167,7 +172,7 @@ int main(void)
 
 
 //*********************Testing I2C EEPROM------------------
-
+/*
 	//the following variables are for testging I2C_EEPROM
 	uint8_t data1 =0x67,  data2=0x68;
 	uint8_t readData=0x00;
@@ -229,7 +234,7 @@ int main(void)
 	HAL_Delay(1000);
 	
 
-
+*/
 //******************************testing I2C EEPROM*****************************	
 		
 
@@ -256,14 +261,20 @@ int main(void)
 							b2pressed=0;
 							state=setState;
 							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"set");
+							BSP_LCD_GLASS_DisplayString((uint8_t*)"SET");
 							RTC_AlarmA_IT_Disable(&RTCHandle);
 			}
 					else if (b1pressed==1) {
 							b1pressed=0;
 							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"b1");
+							BSP_LCD_GLASS_DisplayString((uint8_t*)"SAVED");
+							EE_RecordTime(&RTCHandle);
+							break;
 			}
+					else if (leftpressed==1){
+							leftpressed=0;
+							EE_DisplayTime(&RTCHandle);
+					}
 					break;
 				case showDate:
 							RTC_DateShow(&RTCHandle);
@@ -882,7 +893,108 @@ void pushButtons_Init(void){
 	
 }
 
+HAL_StatusTypeDef EE_RecordTime(RTC_HandleTypeDef *hrtc)
+{
+	//RTC_AlarmA_IT_Disable(hrtc);
+	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(hrtc, &RTC_DateStructure, RTC_FORMAT_BIN);
+	
+	ss=RTC_TimeStructure.Seconds;
+	mm=RTC_TimeStructure.Minutes;
+	hh=RTC_TimeStructure.Hours;
+	
+	EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, memLocation, ss);
+  
+  if(EE_status != HAL_OK)
+  {
+    I2C_Error(&pI2c_Handle);
+	}
+	
+	EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, memLocation+1, mm);
+  
+  if(EE_status != HAL_OK)
+  {
+    I2C_Error(&pI2c_Handle);
+	}
+	
+	EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, memLocation+2, hh);
+  
+  if(EE_status != HAL_OK)
+  {
+    I2C_Error(&pI2c_Handle);
+	}
+	
+	if (memLocation < 0xFFFD)
+	{
+		memLocation=memLocation+3;		// As long as we have 3 spots open for next timestamp write (3 bytes), increment memlocation by 3
+		
+		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation); //update memlocation pointer in EEPROM in case of power loss
+  
+		if(EE_status != HAL_OK)
+		{
+			I2C_Error(&pI2c_Handle);
+		}
+	}
+	else
+	{
+		memLocation=0x0001;					// If there is no space for the next timestamp write, overwrite oldest timestamps
+		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation);	// update memlocation pointer
+  
+		if(EE_status != HAL_OK)
+		{
+			I2C_Error(&pI2c_Handle);
+		}
+	}
+	//RTC_AlarmA_IT_Enable(hrtc);
+	
+	return EE_status;
+}
 
+void EE_DisplayTime(RTC_HandleTypeDef *hrtc)
+{
+	RTC_AlarmA_IT_Disable(hrtc);
+	
+	if (memLocation < 0x06)		//This would mean there haven't been 2 presses yet saved in eeprom
+	{
+		BSP_LCD_GLASS_Clear();
+		BSP_LCD_GLASS_DisplayString((uint8_t*)"TOOFEW");
+	}
+	else 
+	{		
+		hh=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS, memLocation-1);	// DO NOT change memLocation value, we still want it pointing at latest timestamp
+		
+		mm=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,memLocation-2);
+		
+		ss=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,memLocation-3);
+		
+		sprintf(timestring,"%02u%02u%02u",hh,mm,ss);
+		
+		BSP_LCD_GLASS_Clear();
+		BSP_LCD_GLASS_DisplayString((uint8_t*)"time1");
+		HAL_Delay(500);
+		BSP_LCD_GLASS_Clear();
+		BSP_LCD_GLASS_DisplayString((uint8_t*)timestring);
+		HAL_Delay(500);
+		
+		hh=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS, memLocation-4);
+		
+		mm=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,memLocation-5);
+		
+		ss=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,memLocation-6);
+		
+		sprintf(timestring,"%02u%02u%02u",hh,mm,ss);
+		
+		BSP_LCD_GLASS_Clear();
+		BSP_LCD_GLASS_DisplayString((uint8_t*)"time2");
+		HAL_Delay(500);
+		BSP_LCD_GLASS_Clear();
+		BSP_LCD_GLASS_DisplayString((uint8_t*)timestring);
+		HAL_Delay(500);
+		BSP_LCD_GLASS_Clear();
+	}
+	
+	RTC_AlarmA_IT_Enable(hrtc);
+}
 
 
 void RTC_Update(void){
