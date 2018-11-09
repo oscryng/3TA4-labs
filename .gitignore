@@ -1,6 +1,10 @@
 /STM32Cube_FW_L4_V1.8.0
-/lab3/DebugConfig
-/lab3/inc
-/lab3/Listings
-/lab3/Objects
-/lab3/RTE
+*/DebugConfig
+*/inc
+*/Listings
+*/Objects
+*/RTE
+*/inc
+*/EventRecordStub.scvd
+*/lab4.uvguix.lis3
+*/lab4.uvopotx

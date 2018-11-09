@@ -53,8 +53,9 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-//extern TIM_HandleTypeDef    Tim3_Handle, Tim4_Handle;
-extern RTC_HandleTypeDef RTCHandle;
+extern ADC_HandleTypeDef    Adc_Handle;
+extern TIM_HandleTypeDef    Tim3_Handle, Tim4_Handle;
+
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -176,12 +177,16 @@ void SysTick_Handler(void)
   */
 void EXTI0_IRQHandler(void)
 {
+	
 	HAL_GPIO_EXTI_IRQHandler(SEL_JOY_PIN);  //PA0
 }
+
 void EXTI1_IRQHandler (void)
 {
+ 
 	HAL_GPIO_EXTI_IRQHandler(LEFT_JOY_PIN);  
 }
+
 
 /**
   * @brief  This function handles EXTI2 interrupt request.
@@ -190,6 +195,7 @@ void EXTI1_IRQHandler (void)
   */
 void EXTI2_IRQHandler (void)
 {
+
 	HAL_GPIO_EXTI_IRQHandler(RIGHT_JOY_PIN);  
 }
 
@@ -200,7 +206,7 @@ void EXTI2_IRQHandler (void)
   */
 void EXTI3_IRQHandler (void)
 {
-  HAL_GPIO_EXTI_IRQHandler(UP_JOY_PIN); 
+	HAL_GPIO_EXTI_IRQHandler(UP_JOY_PIN); 
 }
 
 /**
@@ -211,30 +217,35 @@ void EXTI3_IRQHandler (void)
 void EXTI9_5_IRQHandler (void)
 //void EXTI5_IRQHandler (void)  //will not work!
 {
-  HAL_GPIO_EXTI_IRQHandler(DOWN_JOY_PIN);  //PA5
+	HAL_GPIO_EXTI_IRQHandler(DOWN_JOY_PIN);  //PA5
 }
 
-void EXTI15_10_IRQHandler (void)
+
+
+
+void ADC1_IRQHandler(void){     //there is no ADC_IRQHandler.
+	  HAL_ADC_IRQHandler(&Adc_Handle);
+}
+
+void DMA2_Channel3_IRQHandler(void)
 {
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);  //PE14
-	HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_11);	//PE12
+		HAL_DMA_IRQHandler(Adc_Handle.DMA_Handle);
 }
 
 
-void RTC_Alarm_IRQHandler(void)
+
+void TIM3_IRQHandler(void)
 {
-  HAL_RTC_AlarmIRQHandler(&RTCHandle);
-	
+	HAL_TIM_IRQHandler(&Tim3_Handle);
+}
+
+void TIM4_IRQHandler(void)
+{	
+		HAL_TIM_IRQHandler(&Tim4_Handle);
 }
 
 
 
-void TAMP_STAMP_IRQHandler(void)
-{
-	//BSP_LED_Toggle(LED4);
-	HAL_RTCEx_TamperTimeStampIRQHandler(&RTCHandle);
-	
-}
 
 
 

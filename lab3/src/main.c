@@ -63,7 +63,7 @@ NOTE: students can also configure the TimeStamp pin
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef  pI2c_Handle;
+I2C_HandleTypeDef  pI2c_Handle;			// saving into external EEprom
 HAL_StatusTypeDef EE_status;
 
 RTC_HandleTypeDef RTCHandle;
@@ -72,17 +72,16 @@ RTC_TimeTypeDef RTC_TimeStructure;
 
 __IO HAL_StatusTypeDef Hal_status;  //HAL_ERROR, HAL_TIMEOUT, HAL_OK, of HAL_BUSY 
 
-typedef enum stateType{showTime,showDate,setState} stateType;
-typedef enum setTimeType{second,minute,hour,wkd,day,month,year} setTimeType;
-stateType state=showTime;
-setTimeType stState=second;
+typedef enum stateType{showTime,showDate,setState,showLast} stateType;						// different states of state machine; only 3 states
+typedef enum setTimeType{second,minute,hour,wkd,day,month,year} setTimeType;	//	for setState
+stateType state=showTime;		// starts in defaut counting state
+setTimeType stState=second;	// setState starts in arbitrary 'seconds' state
 
 I2C_HandleTypeDef  pI2c_Handle;
 HAL_StatusTypeDef EE_status;
 
 //memory location to write to in the device
-__IO uint16_t memLocation = 0x000A; //pick any location within range
-
+__IO uint16_t memLocation; //pick any location within range
  
 
 char lcd_buffer[6];    // LCD display buffer
@@ -95,15 +94,16 @@ uint8_t wd=0x05, dd=0x01, mo=0x0B, yy=0x12, ss, mm, hh; // for weekday, day, mon
 __IO uint32_t SEL_Pressed_StartTick;   //sysTick when the User button is pressed
 
 __IO uint8_t leftpressed, rightpressed, uppressed, downpressed, selpressed, b1pressed, b2pressed;  // button pressed 
-__IO uint8_t  sel_held;   // if the selection button is held for a while (>800ms)
-__IO uint8_t sLast;
+__IO uint8_t  sel_held;   // if the selection button is held for a while (>1000ms)
+__IO uint8_t sLast;				// to ensure user does not save the same second twice into ee_prom, basically a software debounce
+
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
 
-void pushButtons_Init(void);
+void pushButtons_Init(void);			// initialize 2 external push buttons
 void RTC_Config(void);
-void RTC_Update(void);
+void RTC_Update(void);						// to update RTC in real time
 void RTC_AlarmAConfig(void);
 void RTC_DateShow(RTC_HandleTypeDef *hrtc);
 
@@ -156,12 +156,12 @@ int main(void)
 	
 	BSP_JOY_Init(JOY_MODE_EXTI);
 
-	pushButtons_Init();	
+	pushButtons_Init();	// initialize buttons
 	
 	BSP_LCD_GLASS_DisplayString((uint8_t*)"MT3TA4");	
 	HAL_Delay(1000);
 
-
+	memLocation=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,0x0000);
 //configure real-time clock
 	RTC_Config();
 	
@@ -172,7 +172,7 @@ int main(void)
 
 
 //*********************Testing I2C EEPROM------------------
-
+/*
 	//the following variables are for testging I2C_EEPROM
 	uint8_t data1 =0x67,  data2=0x68;
 	uint8_t readData=0x00;
@@ -234,7 +234,7 @@ int main(void)
 	HAL_Delay(1000);
 	
 
-
+*/
 //******************************testing I2C EEPROM*****************************	
 		
 
@@ -256,36 +256,36 @@ int main(void)
 
 	switch (state) { 
 				
-				case showTime:
-					if (b2pressed==1) {
+				case showTime:												// default state: shows timer going up in 1 sec increments
+					if (b2pressed==1) {									// if external button 2 is pressed, enter set mode and temporarily disable AlarmA
 							b2pressed=0;
 							state=setState;
 							BSP_LCD_GLASS_Clear();
 							BSP_LCD_GLASS_DisplayString((uint8_t*)"SET");
 							RTC_AlarmA_IT_Disable(&RTCHandle);
 			}
-					else if (b1pressed==1) {
+					else if (b1pressed==1) {						// if external button 1 is pressed, record time onto EEprom with function EE_RecordTime
 							b1pressed=0;
-							if (sLast == RTC_TimeStructure.Seconds){
+							if (sLast == RTC_TimeStructure.Seconds){					// software debounce; will not save multiple times in one second
 								break;
 							}
 							BSP_LCD_GLASS_Clear();
 							BSP_LCD_GLASS_DisplayString((uint8_t*)"SAVED");
 							EE_RecordTime(&RTCHandle);
-							sLast = RTC_TimeStructure.Seconds;
+							sLast = RTC_TimeStructure.Seconds;								// record time and saves the time you saved into variable sLast, if sLast == current time on RTC then break
 							break;
 			}
-					else if (leftpressed==1){
+					else if (leftpressed==1){															// if left button is pressed, enter showLast state
 							leftpressed=0;
-							EE_DisplayTime(&RTCHandle);
+							state = showLast;
 					}
 					break;
-				case showDate:
+				case showDate:													// show date state: temporarily shows date, then returns to showTime state
 							RTC_DateShow(&RTCHandle);
 							state = showTime;
 					break;
-				case setState:
-							if (leftpressed==1){
+				case setState:												// time setting state: joystick buttons have differnet functions while in this state
+					if (leftpressed==1){								// 	shifts 'cursor' between different setting states: secs,mins,hours,wkday,day,month,year
 									leftpressed=0;
 									switch (stState){
 										case second:
@@ -325,7 +325,7 @@ int main(void)
 											break;
 									}
 							}
-							else if (rightpressed==1){
+							else if (rightpressed==1){			//  same as left but opposite
 									rightpressed=0;
 									switch (stState){
 										case second:
@@ -365,7 +365,7 @@ int main(void)
 											break;
 									}
 							}
-							else if (uppressed==1){
+							else if (uppressed==1){					//	increases/decreases value of state you're on
 									uppressed=0;
 									switch (stState){
 										case second:
@@ -423,7 +423,7 @@ int main(void)
 											break;
 									}
 							}
-							else if (downpressed==1){
+							else if (downpressed==1){				//  same as up press but opposite
 									downpressed=0;
 									switch (stState){
 										case second:
@@ -500,19 +500,22 @@ int main(void)
 											break;
 									}
 							}
-							else if (b2pressed==1){
+							else if (b2pressed==1){					// 	returns to showTime state
 									b2pressed=0;
 									state=showTime;
 									RTC_Update();							// update time before you go back to showTime
 									RTC_Config();							// have to reconfig
-								  RTC_AlarmA_IT_Enable(&RTCHandle);
+								  RTC_AlarmA_IT_Enable(&RTCHandle);			// re-enable clock
 							}
+					break;
+				case showLast:												// showLast state simply calls EE_DisplayTime
+					RTC_AlarmA_IT_Disable(&RTCHandle);
+					EE_DisplayTime(&RTCHandle);
+					state = showTime;
 					break;
 				
 			} //end of switch					
 		
-
-
 	}
 }
 
@@ -637,7 +640,7 @@ void RTC_Config(void) {
 				RTCHandle.Instance = RTC;
 				RTCHandle.Init.HourFormat = RTC_HOURFORMAT_24;
 				
-				RTCHandle.Init.AsynchPrediv = 0x7F; 
+				RTCHandle.Init.AsynchPrediv = 0x7F; 			// got this from example RTC_Alarm
 				RTCHandle.Init.SynchPrediv = 0x00FF; 
 				
 				
@@ -659,7 +662,7 @@ void RTC_Config(void) {
 				
  		/*****************Students: please complete the following lnes*****************************
 		*/// ***************************************************************************************
-				RTC_DateStructure.Year = yy;
+				RTC_DateStructure.Year = yy;				// initial year/month/etc
 				RTC_DateStructure.Month = mo;
 				RTC_DateStructure.Date = dd;
 				RTC_DateStructure.WeekDay = wd;
@@ -801,7 +804,7 @@ HAL_StatusTypeDef  RTC_AlarmA_IT_Enable(RTC_HandleTypeDef *hrtc)
   * @param GPIO_Pin: Specifies the pins connected EXTI line
   * @retval None
   */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)		/// interupts
 {
   switch (GPIO_Pin) {
 			case GPIO_PIN_0: 		               //SELECT button					
@@ -834,9 +837,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 }
 
 
-void RTC_TimeShow(RTC_HandleTypeDef *hrtc){
-	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);
-	HAL_RTC_GetDate(hrtc, &RTC_DateStructure, RTC_FORMAT_BIN);
+void RTC_TimeShow(RTC_HandleTypeDef *hrtc){					// to show time
+	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);			// GetTime locks value in shadow register
+	HAL_RTC_GetDate(hrtc, &RTC_DateStructure, RTC_FORMAT_BIN);			// have to GetDate to unlock
 	
 	ss=RTC_TimeStructure.Seconds;
 	mm=RTC_TimeStructure.Minutes;
@@ -844,11 +847,11 @@ void RTC_TimeShow(RTC_HandleTypeDef *hrtc){
 	
 	sprintf(timestring,"%02u%02u%02u",hh,mm,ss); 
 	
-	BSP_LCD_GLASS_DisplayString((uint8_t*)timestring);
+	BSP_LCD_GLASS_DisplayString((uint8_t*)timestring);		// displays time string to LCD
 	
 }
 
-void RTC_DateShow(RTC_HandleTypeDef *hrtc)
+void RTC_DateShow(RTC_HandleTypeDef *hrtc)				//	to show date
 {
 	RTC_AlarmA_IT_Disable(&RTCHandle);
 	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);
@@ -860,11 +863,11 @@ void RTC_DateShow(RTC_HandleTypeDef *hrtc)
 	
 	sprintf(datestring," d%02u m%02u y%02u ",dd,mo,yy);
 	
-	BSP_LCD_GLASS_ScrollSentence((uint8_t*)datestring,1,500);
+	BSP_LCD_GLASS_ScrollSentence((uint8_t*)datestring,1,500);			// displays date as scrolling sentence
 	RTC_AlarmA_IT_Enable(&RTCHandle);
 }
 
-void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)			// after each alarm interrupt, toggle LED and clear screen/display time
 {
   BSP_LED_Toggle(LED5);
 	BSP_LCD_GLASS_Clear();
@@ -872,20 +875,20 @@ void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 	
 }
 
-void pushButtons_Init(void){
+void pushButtons_Init(void){													// initialize push buttons
 	
 	GPIO_InitTypeDef GPIO_InitStruct;
 	
 	__HAL_RCC_GPIOE_CLK_ENABLE();
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_11;
-	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	GPIO_InitStruct.Pin = GPIO_PIN_11;												// initialize pin 11 as pullup (push button 1)
+	GPIO_InitStruct.Pull = GPIO_PULLUP;												// couldn't get two pulldown buttons to work
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	
 	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_15;
+	GPIO_InitStruct.Pin = GPIO_PIN_15;												// initialize pin 15 as pulldown (push button 2)
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
@@ -899,15 +902,15 @@ void pushButtons_Init(void){
 
 HAL_StatusTypeDef EE_RecordTime(RTC_HandleTypeDef *hrtc)
 {
-	//RTC_AlarmA_IT_Disable(hrtc);
-	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);
+
+	HAL_RTC_GetTime(hrtc, &RTC_TimeStructure, RTC_FORMAT_BIN);				// get current time
 	HAL_RTC_GetDate(hrtc, &RTC_DateStructure, RTC_FORMAT_BIN);
 	
 	ss=RTC_TimeStructure.Seconds;
 	mm=RTC_TimeStructure.Minutes;
 	hh=RTC_TimeStructure.Hours;
 	
-	EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, memLocation, ss);
+	EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, memLocation, ss);			// check EE_status to ensure memory at memLocation is OK
   
   if(EE_status != HAL_OK)
   {
@@ -928,36 +931,33 @@ HAL_StatusTypeDef EE_RecordTime(RTC_HandleTypeDef *hrtc)
     I2C_Error(&pI2c_Handle);
 	}
 	
-	if (memLocation < 0xFFFD)
+	if (memLocation < 0xFFFD)				// make sure you have at least 3 bytes in memory
 	{
-		memLocation=memLocation+3;		// As long as we have 3 spots open for next timestamp write (3 bytes), increment memlocation by 3
+		memLocation=memLocation+3;		
 		
-		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation); //update memlocation pointer in EEPROM in case of power loss
+		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation); // write memory location to 0x0000 to remember last location
+
+		if(EE_status != HAL_OK)
+		{
+			I2C_Error(&pI2c_Handle);
+		}
+	}
+	else{
+		memLocation=0x000A;					// if you don't have at least 3 bytes, restart from beginning
+		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation);	// update memlocation
   
 		if(EE_status != HAL_OK)
 		{
 			I2C_Error(&pI2c_Handle);
 		}
 	}
-	else
-	{
-		memLocation=0x0001;					// If there is no space for the next timestamp write, overwrite oldest timestamps
-		EE_status=I2C_ByteWrite(&pI2c_Handle,EEPROM_ADDRESS, 0x0000, memLocation);	// update memlocation pointer
-  
-		if(EE_status != HAL_OK)
-		{
-			I2C_Error(&pI2c_Handle);
-		}
-	}
-	//RTC_AlarmA_IT_Enable(hrtc);
 	
 	return EE_status;
 }
 
 void EE_DisplayTime(RTC_HandleTypeDef *hrtc)
 {
-	RTC_AlarmA_IT_Disable(hrtc);
-	
+	memLocation=I2C_ByteRead(&pI2c_Handle,EEPROM_ADDRESS,0x0000);
 	if (memLocation < 0x06)		//This would mean there haven't been 2 presses yet saved in eeprom
 	{
 		BSP_LCD_GLASS_Clear();
@@ -1001,7 +1001,7 @@ void EE_DisplayTime(RTC_HandleTypeDef *hrtc)
 }
 
 
-void RTC_Update(void){
+void RTC_Update(void){									// update RTC
 				RTC_DateStructure.Year = yy;
 				RTC_DateStructure.Month = mo;
 				RTC_DateStructure.Date = dd;
