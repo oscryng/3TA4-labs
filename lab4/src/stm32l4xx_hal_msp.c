@@ -164,14 +164,14 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
-  GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
+  GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;		// configure TIM4 to pin 6
   GPIO_InitStruct.Pin = GPIO_PIN_6;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 	
 }
 
 
-void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
+void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)			// configure ADC to pin 2
 {
   GPIO_InitTypeDef          GPIO_InitStruct;
   static DMA_HandleTypeDef  hdma_adc;

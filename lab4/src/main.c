@@ -72,31 +72,28 @@ __IO uint32_t ADC1ConvertedValue=0;   //if declare it as 16t, it will not work.
 char temperatureString[6] = {0};
 char setPointString[6] = {0};
 
-volatile double  setPoint=23.5;
-uint16_t tempAboveBool =1;
-uint16_t dutyPercent=0;
+volatile double  setPoint=25;				// set point determines when the fan will turn on
+uint16_t tempAboveBool =1;					// boolean for when temperature is above setPoint
+uint16_t dutyPercent=0;							// duty cycle as a percent
 
-double measuredTemp; 
-uint16_t PULSE1_VALUE = 0 ; 
+double measuredTemp; 								// measured temperature
 
 char lcd_buffer[6];    // LCD display buffer
 
-double measuredTemp; 
-
-typedef enum state{showTemp,setState,fanState} state;
-uint16_t sel_pressed, up_pressed, down_pressed;
+typedef enum state{showTemp,setState,fanState} state;			// 3 states: neutral(showtemp), setting setPoint state, fan on state
+uint16_t sel_pressed, up_pressed, down_pressed;						// for buttons
 state fState = showTemp;
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
-void ADC_Config(void);
-double ADCtoDegC(uint32_t val);
-void displayTempString(void);
-void TIM3_Config(void);
+void ADC_Config(void);							// configure ADC
+double ADCtoDegC(uint32_t val);				//	converts ADC to degrees
+void displayTempString(void);				// converts temperature string
+void TIM3_Config(void);							// timers 3 and 4
 void TIM3_OC_Config(void);
 void TIM4_PWM_Config(void);
-void Set_Duty(double duty);
+void Set_Duty(double duty);					// sets duty
 
 //static void EXTILine14_Config(void); // configure the exti line4, for exterrnal button, WHICH BUTTON?
 
@@ -120,7 +117,7 @@ int main(void)
        - Set NVIC Group Priority to 4 
        - Low Level Initialization
      */
-	sel_pressed=0;
+	sel_pressed=0;			// initialize everything
 	up_pressed=0;
 	down_pressed=0;
 	
@@ -130,7 +127,7 @@ int main(void)
 
 	HAL_InitTick(0x0000); // set systick's priority to the highest.
 
-	TIM3_CCR = 20000;
+	TIM3_CCR = 10000;
 	
 	BSP_LED_Init(LED4);
 	BSP_LED_Init(LED5);
@@ -151,7 +148,7 @@ int main(void)
   {
 
 
-		if (sel_pressed==1){
+		if (sel_pressed==1){						// if select is pressed in any state, change to setPoint state
 			if (fState == setState) {
 				fState = showTemp;
 			}
@@ -162,12 +159,12 @@ int main(void)
 			}
 			sel_pressed=0;
 		}
-		measuredTemp = ADCtoDegC(ADC1ConvertedValue);
+		measuredTemp = ADCtoDegC(ADC1ConvertedValue);			// check if measured temp is > setPoint, if so, change to fanState
 		if (measuredTemp > setPoint){
 				tempAboveBool = 1;
 		}
 			switch (fState){
-				case showTemp:
+				case showTemp:														// neutral, shows temperature. if temp > setPoint, change to fanState
 						Set_Duty(0);
 						displayTempString();
 						if (tempAboveBool == 1){
@@ -175,7 +172,7 @@ int main(void)
 						}
 						break;
 				case setState:
-						if (up_pressed ==1){
+						if (up_pressed ==1){													// in setState, change setPoint up or down
 								setPoint += 0.5;
 								up_pressed = 0;
 								sprintf(setPointString, "%.1f", setPoint);
@@ -190,11 +187,11 @@ int main(void)
 								BSP_LCD_GLASS_DisplayString((uint8_t*)setPointString);
 						}
 						break;
-				case fanState:
-						dutyPercent = (measuredTemp - setPoint)*10;
+				case fanState:																	// fanState
+						dutyPercent = (measuredTemp - setPoint)*20;			// sets duty % to degrees celcius greater than setpoint * 20. ie. 27 is 2 greater than 25, 2*20 = 40% duty
 						Set_Duty(dutyPercent);
 						displayTempString();
-						if (measuredTemp < setPoint){
+						if (measuredTemp < setPoint){			// if below, change back to neutral temperature state
 								fState = showTemp;
 								tempAboveBool = 0;
 						}
@@ -221,7 +218,7 @@ int main(void)
   */
 
 
-void SystemClock_Config(void)
+void SystemClock_Config(void)			// config systemclock
 { 
 	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};                                            
@@ -285,7 +282,7 @@ void SystemClock_Config(void)
 
 double ADCtoDegC(uint32_t val) // converts ADC to celcius
 {
-	return (0.02442*val);
+	return (0.02442*val);					// calculated by hand
 }
 
 void displayTempString(void)  //  displays temperature reading
@@ -295,7 +292,7 @@ void displayTempString(void)  //  displays temperature reading
 	BSP_LCD_GLASS_Clear();
 	BSP_LCD_GLASS_DisplayString((uint8_t*)temperatureString);	
 }
-void TIM3_Config(void)
+void TIM3_Config(void)			// configure tim3
 {
 	TIM3_Prescaler = (uint16_t)(SystemCoreClock/10000) - 1;		//10KHz
 	
@@ -306,7 +303,7 @@ void TIM3_Config(void)
 	Tim3_Handle.Init.CounterMode = TIM_COUNTERMODE_UP;
 }
 
-void TIM3_OC_Config(void)
+void TIM3_OC_Config(void)		// configure tim3 OC
 {
 	Tim3_OCInitStructure.OCMode = TIM_OCMODE_TIMING;
 	Tim3_OCInitStructure.Pulse = TIM3_CCR;		//20000/10000 = 0.5s
@@ -319,7 +316,7 @@ void TIM3_OC_Config(void)
 	HAL_TIM_OC_Start_IT(&Tim3_Handle, TIM_CHANNEL_1);
 					
 }
-void TIM4_PWM_Config(void){
+void TIM4_PWM_Config(void){	// configure tim4 PWM
 	
 	TIM4_Prescaler = (uint16_t)(SystemCoreClock/16000000) - 1;		//16MHz
 	
@@ -344,7 +341,7 @@ void TIM4_PWM_Config(void){
   PWMConfig.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
   PWMConfig.OCIdleState  = TIM_OCIDLESTATE_RESET;
-	PWMConfig.Pulse = PULSE1_VALUE;	
+	PWMConfig.Pulse = 0;	
 	
 
 
@@ -361,7 +358,8 @@ void TIM4_PWM_Config(void){
 	}
 
 }
-void ADC_Config(void){
+
+void ADC_Config(void){			// configure ADC
  /* ### - 1 - Initialize ADC peripheral #################################### */
   Adc_Handle.Instance = ADC1;
   if (HAL_ADC_DeInit(&Adc_Handle) != HAL_OK)
@@ -420,7 +418,7 @@ void ADC_Config(void){
 
 
 }
-void Set_Duty(double duty){
+void Set_Duty(double duty){	// set Duty
 		PWMConfig.Pulse = (PERIOD_VALUE*duty/100);
 		HAL_TIM_PWM_ConfigChannel(&Tim4_Handle, &PWMConfig, TIM_CHANNEL_1);
 		HAL_TIM_PWM_Start(&Tim4_Handle, TIM_CHANNEL_1);
@@ -432,7 +430,7 @@ void Set_Duty(double duty){
   * @param GPIO_Pin: Specifies the pins connected EXTI line
   * @retval None
   */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)		// interrupts
 {
   switch (GPIO_Pin) {
 			case GPIO_PIN_0: 		               //SELECT button					
