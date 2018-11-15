@@ -55,6 +55,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 #define PERIOD_VALUE (uint32_t)(666-1)
+#define CONV_MULTIPLIER (uint32_t)(0.02442)
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -75,16 +76,21 @@ char temperatureString[6] = {0};
 char setPointString[6] = {0};
 
 volatile double  setPoint=23.5;
+uint16_t tempAboveBool = 1;
+
 
 double measuredTemp; 
 uint16_t PULSE1_VALUE = 0 ; 
 
 
 char lcd_buffer[6];    // LCD display buffer
-
+uint16_t sel_pressed, up_pressed, down_pressed;
 double measuredTemp; 
 state FanState = DISPLAYTEMP; 
 
+typedef enum state{showTemp,setState,fanState} state;
+	
+state fState = showTemp;
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
@@ -143,16 +149,63 @@ int main(void)
 	TIM3_Config();
 	TIM3_OC_Config();
 	TIM4_PWM_Config();
+
+	sel_pressed=0;
+	up_pressed=0;
+	down_pressed=0;
+	fState = showTemp;
   while (1)
   {
-				Set_Duty(0);
-				displayTempString(); 
-				
-					
-					
-					
-	} //end of while 1
 
+		if (sel_pressed==1){
+			if (fState == setState) {
+				fState = showTemp;
+			}
+			else {
+				fState = setState;
+				BSP_LCD_GLASS_Clear();
+				BSP_LCD_GLASS_DisplayString((uint8_t*)"SET");
+			}
+			sel_pressed=0;
+		}
+		measuredTemp = ADCtoDegC(ADC1ConvertedValue);
+		if (measuredTemp > setPoint){
+				tempAboveBool = 1;
+		}
+			switch (fState){
+				case showTemp:
+						Set_Duty(0);
+						displayTempString();
+						if (tempAboveBool == 1){
+								fState = fanState;
+						}
+						break;
+				case setState:
+						if (up_pressed ==1){
+								setPoint += 0.5;
+								up_pressed = 0;
+								sprintf(setPointString, "%.1f", setPoint);
+								BSP_LCD_GLASS_Clear();
+								BSP_LCD_GLASS_DisplayString((uint8_t*)setPointString);
+						}
+						if (down_pressed ==1){
+								setPoint -= 0.5;
+								down_pressed = 0;
+								sprintf(setPointString, "%.1f", setPoint);
+								BSP_LCD_GLASS_Clear();
+								BSP_LCD_GLASS_DisplayString((uint8_t*)setPointString);
+						}
+						break;
+				case fanState:
+						Set_Duty(0);
+						displayTempString();
+						if (measuredTemp < setPoint){
+								fState = showTemp;
+						}
+						break;
+			}
+
+	} //end of while 1
 }
 
 
@@ -236,7 +289,7 @@ void SystemClock_Config(void)
 
 double ADCtoDegC(uint32_t val) // converts ADC to celcius
 {
-	return (0.02442*val);
+	return (CONV_MULTIPLIER*val);
 }
 
 void displayTempString(void)  //  displays temperature reading
@@ -387,7 +440,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   switch (GPIO_Pin) {
 			case GPIO_PIN_0: 		               //SELECT button					
-									
+						sel_pressed = 1;
 						break;	
 			case GPIO_PIN_1:     //left button						
 
@@ -396,12 +449,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 							break;*/
 			case GPIO_PIN_3:    //up button							
-							BSP_LCD_GLASS_Clear();
-							BSP_LCD_GLASS_DisplayString((uint8_t*)"uWu");					
+							up_pressed = 1;				
 							break;
 			
 			case GPIO_PIN_5:    //down button						
-					
+							down_pressed = 1;
 							break;
 			
 			default://
@@ -414,6 +466,7 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef * htim) //see  stm32XXX_h
 {																																//for timer4 
 	BSP_LED_Toggle(LED5);
 	HAL_ADC_Start_DMA(&Adc_Handle,(uint32_t*)&ADC1ConvertedValue,1);
+	
 }
  
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef * htim){  //this is for TIM4_pwm
