@@ -83,6 +83,7 @@ uint16_t PULSE1_VALUE = 0 ;
 char lcd_buffer[6];    // LCD display buffer
 
 double measuredTemp; 
+state FanState = DISPLAYTEMP; 
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
@@ -117,7 +118,10 @@ int main(void)
        - Set NVIC Group Priority to 4 
        - Low Level Initialization
      */
-
+	sel_pressed=0;
+	up_pressed=0;
+	down_pressed=0;
+	
 	HAL_Init();
 
 	SystemClock_Config();   
@@ -143,6 +147,10 @@ int main(void)
   {
 				Set_Duty(0);
 				displayTempString(); 
+				
+					
+					
+					
 	} //end of while 1
 
 }
