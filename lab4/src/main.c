@@ -74,6 +74,7 @@ char setPointString[6] = {0};
 
 volatile double  setPoint=23.5;
 uint16_t tempAboveBool =1;
+uint16_t dutyPercent=0;
 
 double measuredTemp; 
 uint16_t PULSE1_VALUE = 0 ; 
@@ -190,7 +191,8 @@ int main(void)
 						}
 						break;
 				case fanState:
-						Set_Duty(100);
+						dutyPercent = (measuredTemp - setPoint)*10;
+						Set_Duty(dutyPercent);
 						displayTempString();
 						if (measuredTemp < setPoint){
 								fState = showTemp;
@@ -439,8 +441,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 			case GPIO_PIN_1:     //left button						
 
 							break;
-/*			case GPIO_PIN_2:    //right button						  to play again.
-							break;*/
+			
 			case GPIO_PIN_3:    //up button							
 							up_pressed = 1;				
 							break;
