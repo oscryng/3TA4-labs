@@ -1,5 +1,4 @@
 /**
-
 ******************************************************************************
   * @file    GPIO/GPIO_EXTI/Src/main.c
   * @author  MCD Application Team
@@ -35,8 +34,6 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-
-
 */
 
 
@@ -440,7 +437,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 							break;
 /*			case GPIO_PIN_2:    //right button						  to play again.
-
 							break;*/
 			case GPIO_PIN_3:    //up button							
 							up_pressed = 1;				
