@@ -54,35 +54,46 @@
   */
 
 /* Private typedef -----------------------------------------------------------*/
+#define PERIOD_VALUE (uint32_t)(666-1)
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 __IO HAL_StatusTypeDef Hal_status;  //HAL_ERROR, HAL_TIMEOUT, HAL_OK, of HAL_BUSY 
 
-ADC_HandleTypeDef    Adc_Handle;
-
+ADC_HandleTypeDef    Adc_Handle;	// ADC Handle declaration
+ADC_ChannelConfTypeDef        Adc_Channel; // ADC channel configuration structure declaration 
 TIM_HandleTypeDef    Tim3_Handle, Tim4_Handle;
-TIM_OC_InitTypeDef Tim3_OCInitStructure, Tim4_OCInitStructure;
+TIM_OC_InitTypeDef Tim3_OCInitStructure, PWMConfig;
+
+uint16_t TIM3_Prescaler;    
+uint16_t TIM3_CCR;   //make it interrupt every 500 ms, halfsecond.
+uint16_t TIM4_Prescaler;  
 
 
-__IO uint16_t ADC1ConvertedValue;   //if declare it as 16t, it will not work.
-
+__IO uint32_t ADC1ConvertedValue=0;   //if declare it as 16t, it will not work.
+char temperatureString[6] = {0};
+char setPointString[6] = {0};
 
 volatile double  setPoint=23.5;
 
 double measuredTemp; 
-
+uint16_t PULSE1_VALUE = 0 ; 
 
 
 char lcd_buffer[6];    // LCD display buffer
 
+double measuredTemp; 
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Error_Handler(void);
-
-
-
+void ADC_Config(void);
+double ADCtoDegC(uint32_t val);
+void displayTempString(void);
+void TIM3_Config(void);
+void TIM3_OC_Config(void);
+void TIM4_PWM_Config(void);
+void Set_Duty(double duty);
 
 //static void EXTILine14_Config(void); // configure the exti line4, for exterrnal button, WHICH BUTTON?
 
@@ -113,6 +124,7 @@ int main(void)
 
 	HAL_InitTick(0x0000); // set systick's priority to the highest.
 
+	TIM3_CCR = 20000;
 	
 	BSP_LED_Init(LED4);
 	BSP_LED_Init(LED5);
@@ -121,13 +133,16 @@ int main(void)
 	BSP_LCD_GLASS_Init();
 	
 	BSP_JOY_Init(JOY_MODE_EXTI);  
-
-	
  	
+	ADC_Config();
+	
+	TIM3_Config();
+	TIM3_OC_Config();
+	TIM4_PWM_Config();
   while (1)
   {
-			
-			
+				Set_Duty(0);
+				displayTempString(); 
 	} //end of while 1
 
 }
@@ -210,6 +225,151 @@ void SystemClock_Config(void)
 
 
 
+
+double ADCtoDegC(uint32_t val) // converts ADC to celcius
+{
+	return (0.02442*val);
+}
+
+void displayTempString(void)  //  displays temperature reading
+{	
+	measuredTemp = ADCtoDegC(ADC1ConvertedValue);
+	sprintf(temperatureString, "%.1f", measuredTemp);
+	BSP_LCD_GLASS_Clear();
+	BSP_LCD_GLASS_DisplayString((uint8_t*)temperatureString);	
+}
+void TIM3_Config(void)
+{
+	TIM3_Prescaler = (uint16_t)(SystemCoreClock/10000) - 1;		//10KHz
+	
+	Tim3_Handle.Instance = TIM3;
+	Tim3_Handle.Init.Period = 40000 - 1;			//40000/10000 = 4s. This ensures WaitTime is 4s max
+	Tim3_Handle.Init.Prescaler = TIM3_Prescaler;	
+	Tim3_Handle.Init.ClockDivision = 0;
+	Tim3_Handle.Init.CounterMode = TIM_COUNTERMODE_UP;
+}
+
+void TIM3_OC_Config(void)
+{
+	Tim3_OCInitStructure.OCMode = TIM_OCMODE_TIMING;
+	Tim3_OCInitStructure.Pulse = TIM3_CCR;		//20000/10000 = 0.5s
+	Tim3_OCInitStructure.OCPolarity = TIM_OCPOLARITY_HIGH;
+	
+	HAL_TIM_OC_Init(&Tim3_Handle);
+	
+	HAL_TIM_OC_ConfigChannel(&Tim3_Handle,&Tim3_OCInitStructure,TIM_CHANNEL_1);
+	
+	HAL_TIM_OC_Start_IT(&Tim3_Handle, TIM_CHANNEL_1);
+					
+}
+void TIM4_PWM_Config(void){
+	
+	TIM4_Prescaler = (uint16_t)(SystemCoreClock/16000000) - 1;		//16MHz
+	
+	Tim4_Handle.Instance = TIM4;
+
+  Tim4_Handle.Init.Prescaler       = TIM4_Prescaler;
+  Tim4_Handle.Init.Period            = PERIOD_VALUE;
+  Tim4_Handle.Init.ClockDivision     = 0;
+  Tim4_Handle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  Tim4_Handle.Init.RepetitionCounter = 0;
+
+	 if (HAL_TIM_PWM_Init(&Tim4_Handle) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+
+  PWMConfig.OCMode       = TIM_OCMODE_PWM1;
+  PWMConfig.OCPolarity   = TIM_OCPOLARITY_HIGH;
+  PWMConfig.OCFastMode   = TIM_OCFAST_DISABLE;
+  PWMConfig.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+  PWMConfig.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+
+  PWMConfig.OCIdleState  = TIM_OCIDLESTATE_RESET;
+	PWMConfig.Pulse = PULSE1_VALUE;	
+	
+
+
+  /* Set the pulse value for channel 1 */
+  if (HAL_TIM_PWM_ConfigChannel(&Tim4_Handle, &PWMConfig, TIM_CHANNEL_1) != HAL_OK)
+  {
+    /* Configuration Error */
+    Error_Handler();
+  }
+	
+	if (HAL_TIM_PWM_Start(&Tim4_Handle, TIM_CHANNEL_1))
+	{
+		Error_Handler();
+	}
+
+}
+void ADC_Config(void){
+ /* ### - 1 - Initialize ADC peripheral #################################### */
+  Adc_Handle.Instance = ADC1;
+  if (HAL_ADC_DeInit(&Adc_Handle) != HAL_OK)
+  {
+    /* ADC de-initialization Error */
+    Error_Handler();
+  }
+
+  Adc_Handle.Init.ClockPrescaler        = ADC_CLOCK_ASYNC_DIV1;          /* Asynchronous clock mode, input ADC clock not divided */
+  Adc_Handle.Init.Resolution            = ADC_RESOLUTION_12B;             /* 12-bit resolution for converted data */
+  Adc_Handle.Init.DataAlign             = ADC_DATAALIGN_RIGHT;           /* Right-alignment for converted data */
+  Adc_Handle.Init.ScanConvMode          = DISABLE;                       /* Sequencer disabled (ADC conversion on only 1 channel: channel set on rank 1) */
+  Adc_Handle.Init.EOCSelection          = ADC_EOC_SINGLE_CONV;           /* EOC flag picked-up to indicate conversion end */
+  Adc_Handle.Init.LowPowerAutoWait      = DISABLE;                       /* Auto-delayed conversion feature disabled */
+  Adc_Handle.Init.ContinuousConvMode    = DISABLE;                       /* Continuous mode disabled to have only 1 conversion at each conversion trig */
+  Adc_Handle.Init.NbrOfConversion       = 1;                             /* Parameter discarded because sequencer is disabled */
+  Adc_Handle.Init.DiscontinuousConvMode = DISABLE;                       /* Parameter discarded because sequencer is disabled */
+  Adc_Handle.Init.NbrOfDiscConversion   = 1;                             /* Parameter discarded because sequencer is disabled */
+  Adc_Handle.Init.ExternalTrigConv      = ADC_SOFTWARE_START;            /* Software start to trig the 1st conversion manually, without external event */
+  Adc_Handle.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE; /* Parameter discarded because software trigger chosen */
+  Adc_Handle.Init.DMAContinuousRequests = ENABLE;                        /* DMA circular mode selected */
+  Adc_Handle.Init.Overrun               = ADC_OVR_DATA_OVERWRITTEN;      /* DR register is overwritten with the last conversion result in case of overrun */
+  Adc_Handle.Init.OversamplingMode      = DISABLE;                       /* No oversampling */
+
+  /* Initialize ADC peripheral according to the passed parameters */
+  if (HAL_ADC_Init(&Adc_Handle) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  
+  
+  /* ### - 2 - Start calibration ############################################ */
+  if (HAL_ADCEx_Calibration_Start(&Adc_Handle, ADC_SINGLE_ENDED) !=  HAL_OK)
+  {
+    Error_Handler();
+  }
+	
+  /* ### - 3 - Channel configuration ######################################## */
+  Adc_Channel.Channel      = ADC_CHANNEL_7;                /* Sampled channel number */
+  Adc_Channel.Rank         = ADC_REGULAR_RANK_1;          /* Rank of sampled channel number ADCx_CHANNEL */
+  Adc_Channel.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;    /* Sampling time (number of clock cycles unit) */
+  Adc_Channel.SingleDiff   = ADC_SINGLE_ENDED;            /* Single-ended input channel */
+  Adc_Channel.OffsetNumber = ADC_OFFSET_NONE;             /* No offset subtraction */ 
+  Adc_Channel.Offset = 0;                                 /* Parameter discarded because offset correction is disabled */
+  if (HAL_ADC_ConfigChannel(&Adc_Handle, &Adc_Channel) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  
+  /* ### - 4 - Start conversion in DMA mode ################################# */
+  if (HAL_ADC_Start_DMA(&Adc_Handle, (uint32_t*)&ADC1ConvertedValue, 1) != HAL_OK)
+  {
+		BSP_LCD_GLASS_DisplayString((uint8_t*)"ERROR");
+    Error_Handler();
+  }
+
+
+}
+void Set_Duty(double duty){
+		PWMConfig.Pulse = (PERIOD_VALUE*duty/100);
+		HAL_TIM_PWM_ConfigChannel(&Tim4_Handle, &PWMConfig, TIM_CHANNEL_1);
+		HAL_TIM_PWM_Start(&Tim4_Handle, TIM_CHANNEL_1);
+}
+
+
 /**
   * @brief EXTI line detection callbacks
   * @param GPIO_Pin: Specifies the pins connected EXTI line
@@ -219,16 +379,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   switch (GPIO_Pin) {
 			case GPIO_PIN_0: 		               //SELECT button					
-						
+									
 						break;	
 			case GPIO_PIN_1:     //left button						
-							
+
 							break;
-			case GPIO_PIN_2:    //right button						  to play again.
-						
-							break;
+/*			case GPIO_PIN_2:    //right button						  to play again.
+
+							break;*/
 			case GPIO_PIN_3:    //up button							
-				
+							BSP_LCD_GLASS_Clear();
+							BSP_LCD_GLASS_DisplayString((uint8_t*)"uWu");					
 							break;
 			
 			case GPIO_PIN_5:    //down button						
@@ -243,13 +404,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef * htim) //see  stm32XXX_hal_tim.c for different callback function names. 
 {																																//for timer4 
-
+	BSP_LED_Toggle(LED5);
+	HAL_ADC_Start_DMA(&Adc_Handle,(uint32_t*)&ADC1ConvertedValue,1);
 }
  
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef * htim){  //this is for TIM4_pwm
 	
 	__HAL_TIM_SET_COUNTER(htim, 0x0000);
 }
+
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle)
 {

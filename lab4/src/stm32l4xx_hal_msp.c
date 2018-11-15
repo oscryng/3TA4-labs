@@ -128,18 +128,46 @@ void HAL_TIM_Base_MspInit (TIM_HandleTypeDef *htim)
 
 void HAL_TIM_OC_MspInit(TIM_HandleTypeDef *htim)
 { 
-
+  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+  /* TIMx Peripheral clock enable */
+//
+	__HAL_RCC_TIM3_CLK_ENABLE();
+	
+  /*##-2- Configure the NVIC for TIMx ########################################*/
+  /* Set the TIMx priority */
+//
+	HAL_NVIC_SetPriority(TIM3_IRQn, 2, 0);
+  
+  /* Enable the TIMx global Interrupt */
+//
+	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 
 }
 
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
 {	
+	GPIO_InitTypeDef   GPIO_InitStruct;
+	//TIM_HandleTypeDef   Tim4_Handle;
+	//Tim4_Handle.Instance = TIM4;
+	
+	__HAL_RCC_TIM4_CLK_ENABLE();
 
+  /* Enable GPIO Channels Clock */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
- 
+  /* Configure PA.08 (connected to D7 (pin 23 in CN10 connector)) (TIM1_Channel1), PA.09 (connected to D8 (pin 21 in CN10 connector)) (TIM1_Channel2), PA.10 (connected to D2 (pin 33 in CN10 connector)) (TIM1_Channel3),
+     PA.11 (pin 14 in CN10 connector) (TIM1_Channel4) in output, push-pull, alternate function mode
+  */
+  /* Common configuration for all channels */
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
-
+  GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
 }
 
 
@@ -155,27 +183,36 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
    /* ADC Periph interface clock configuration */
   __HAL_RCC_ADC_CONFIG(RCC_ADCCLKSOURCE_SYSCLK);  //???
 
-
 	/* Enable DMA2 clock */
-  __HAL_RCC_DMA2_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /*##-2- Configure peripheral GPIO ##########################################*/ 
-
- 
-	
-	
-
-
- 
+  /* ADC Channel GPIO pin configuration */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG_ADC_CONTROL;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);					// Pin for ADC12_In7
   //##-3- Configure the DMA  
 	//RM0351, table 45 & 46 on page 342 shows: ADC mapped to DMA1/channel 1  or to DMA2/channel 3.
+  hdma_adc.Instance                 = DMA1_Channel1;
+  hdma_adc.Init.Request             = DMA_REQUEST_0;
+  hdma_adc.Init.Direction           = DMA_PERIPH_TO_MEMORY;
+  hdma_adc.Init.PeriphInc           = DMA_PINC_DISABLE;
+  hdma_adc.Init.MemInc              = DMA_MINC_ENABLE;
+  hdma_adc.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+  hdma_adc.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
+  hdma_adc.Init.Mode                = DMA_CIRCULAR;
+  hdma_adc.Init.Priority            = DMA_PRIORITY_MEDIUM;
 
- 
+  /* Deinitialize  & Initialize the DMA for new transfer */
+  HAL_DMA_DeInit(&hdma_adc);
+  HAL_DMA_Init(&hdma_adc);
 
   __HAL_LINKDMA(hadc, DMA_Handle, hdma_adc);
 
   //##-4- Configure the NVIC for DMA 
-
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);  
 }
   
 /**

@@ -227,7 +227,7 @@ void ADC1_IRQHandler(void){     //there is no ADC_IRQHandler.
 	  HAL_ADC_IRQHandler(&Adc_Handle);
 }
 
-void DMA2_Channel3_IRQHandler(void)
+void DMA1_Channel1_IRQHandler(void)
 {
 		HAL_DMA_IRQHandler(Adc_Handle.DMA_Handle);
 }
