@@ -83,6 +83,7 @@ uint16_t PULSE1_VALUE = 0 ;
 char lcd_buffer[6];    // LCD display buffer
 uint16_t sel_pressed, up_pressed, down_pressed;
 double measuredTemp; 
+state FanState = DISPLAYTEMP; 
 
 typedef enum state{showTemp,setState,fanState} state;
 	
@@ -120,7 +121,10 @@ int main(void)
        - Set NVIC Group Priority to 4 
        - Low Level Initialization
      */
-
+	sel_pressed=0;
+	up_pressed=0;
+	down_pressed=0;
+	
 	HAL_Init();
 
 	SystemClock_Config();   
@@ -149,6 +153,7 @@ int main(void)
 	fState = showTemp;
   while (1)
   {
+
 		if (sel_pressed==1){
 			if (fState == setState) {
 				fState = showTemp;
@@ -196,6 +201,7 @@ int main(void)
 						}
 						break;
 			}
+
 	} //end of while 1
 }
 
