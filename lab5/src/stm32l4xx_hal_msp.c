@@ -56,7 +56,6 @@
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
-
 /** @defgroup HAL_MSP_Private_Functions
   * @{
   */
@@ -117,46 +116,43 @@ void HAL_PPP_MspDeInit(void)
   * @param htim: TIM handle pointer
   * @retval None
   */
-
-/*
 void HAL_TIM_Base_MspInit (TIM_HandleTypeDef *htim)
 {
-  //Enable peripherals and GPIO Clocks 
+  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+  /* TIMx Peripheral clock enable */
  
 __HAL_RCC_TIM3_CLK_ENABLE(); //this is defined in stm32f4xx_hal_rcc.h
 	
 	
-  //Configure the NVIC for TIMx 
-	HAL_NVIC_SetPriority(TIM3_IRQn, 0, 2);
+  /*##-2- Configure the NVIC for TIMx ########################################*/
+  /* Set the TIMx priority */
+	HAL_NVIC_SetPriority(TIM3_IRQn, 1, 0);  //in _hal.c, the priority group is set to 4. 
+																					//so the range of the preemption priority is 0-15, while the range of the sub_priority is 0
+																					//here set is as 1, leave 0 to systick, as systick interrupt may case troubles. 
   
-  // Enable the TIM global Interrupt 
+  /* Enable the TIMx global Interrupt */
 	HAL_NVIC_EnableIRQ(TIM3_IRQn);
 }
 
-*/
-
-void HAL_TIM_OC_MspInit(TIM_HandleTypeDef *htim)
-{ 
-  //Enable peripherals and GPIO Clocks
+//configure the 
+void HAL_TIM_OC_MspInit (TIM_HandleTypeDef *htim)
+{
+  /*##-1- Enable peripherals and GPIO Clocks #################################*/
+  /* TIMx Peripheral clock enable */
  
+__HAL_RCC_TIM4_CLK_ENABLE(); //this is defined in stm32f4xx_hal_rcc.h
+	
+	
+  /*##-2- Configure the NVIC for TIMx ########################################*/
+  /* Set the TIMx priority */
+	HAL_NVIC_SetPriority(TIM4_IRQn, 1, 0);
+  
+  /* Enable the TIMx global Interrupt */
+	HAL_NVIC_EnableIRQ(TIM4_IRQn);
 }
 
 
-  
-/**
-  * @brief ADC MSP De-Initialization 
-  *        This function frees the hardware resources used in this example:
-  *          - Disable the Peripheral's clock
-  *          - Revert GPIO to their default state
-  * @param hadc: ADC handle pointer
-  * @retval None
-  */
 
-
-
- 
- 
- 
 /**
   * @}
   */
