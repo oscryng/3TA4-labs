@@ -508,146 +508,150 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)   //see  stm32fxx_ha
 	
 }
 
+// 10    14
+// 12    15
 
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef * htim) //see  stm32XXX_hal_tim.c for different callback function names. 
 {																																//for timer4 
-			switch (steps){
-						case s1:
-								if (dirBool == 1){		// if clockwise
-										if (stepBool == 1){		// and full step
-													steps = s3;
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
+			switch (steps){			// different states
+						case s1:			// + +
+								if (dirBool ==1){
+										steps = s2;
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+								}
+								else{
+										steps = s8;
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+								}
+								break;
+						case s2:			// + OFF
+								if (dirBool ==1){ // if cw
+										if (stepBool ==1){	// if full step go to OFF +
+												steps = s8;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);	
 										}
-										else{		// if half step
-													steps = s2;
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+										else{				// cw half step go to + -
+												steps = s3;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
 										}
 								}
-								else{								// if ccw
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
-													steps = s7;
+								else{			// if ccw
+										if (stepBool ==1){	// if full step go to OFF -
+												steps = s4;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);	
 										}
-										else{		// if half step
-													steps = s8;
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
+										else{				// ccw half step go to ++
+												steps = s1;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
 										}
 								}
 								break;
-						case s2:
-  							if (dirBool == 1){		// if clockwise
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);		
-										steps = s3;				// can only go to s3 on both full and half step
+						case s3:			// + -
+								if (dirBool ==1){	// if cw, go to OFF -
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
+										steps = s4;
 								}
-								else{								// if ccw
-										steps = s1;
-										
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
-								}
-								break;
-						case s3:
-  							if (dirBool == 1){		// if clockwise
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
-													steps = s5;
-										}
-										else{		// if half step
-													steps = s4;
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
-										}
-								}
-								else{								// if ccw
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
-													steps = s1;
-										}
-										else{		// if half step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
-													steps = s2;
-										}
+								else{			// go to + OFF
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
+										steps = s2;
 								}
 								break;
-						case s4:
-  							if (dirBool == 1){		// if clockwise
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
-										steps = s5;				// can only go one step on both full and half step
+						case s4:			// OFF -
+								if (dirBool ==1){ // if cw 
+										if (stepBool ==1){	// if full step go to + OFF
+												steps = s2;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);	
+										}
+										else{				// cw half step
+												steps = s5;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
+										}
 								}
-								else{								// if ccw
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-										steps = s3;
+								else{			// if ccw
+										if (stepBool ==1){	// if full step go to - OFF
+												steps = s6;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);	
+										}
+										else{				// ccw half step
+												steps = s3;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+										}
 								}
 								break;
-						case s5:
-  							if (dirBool == 1){		// if clockwise
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
-													steps = s7;
-										}
-										else{		// if half step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
-													steps = s6;
-										}
+						case s5:			// - -
+								if (dirBool ==1){	// go to - OFF
+										steps = s6;
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
 								}
-								else{								// if ccw
+								else{						// go to OFF -
+										steps = s4;
 										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-													steps = s3;
-										}
-										else{		// if half step
-													steps = s4;
-										}
 								}
 								break;
-						case s6:
-  							if (dirBool == 1){		// if clockwise
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
-										steps = s7;				// can only go one step on both full and half step
+						case s6:	// - OFF
+								if (dirBool ==1){ // if cw
+										if (stepBool ==1){	// if full step go to OFF -
+												steps = s4;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);	
+										}
+										else{				// cw half step go to -+
+												steps = s7;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
+										}
 								}
-								else{								// if ccw
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
-										steps = s5;
+								else{			// if ccw
+										if (stepBool ==1){	// if full step go to OFF +
+												steps = s8;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);	
+										}
+										else{				// ccw half step go to - -
+												steps = s5;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
+										}
 								}
 								break;
 						case s7:
-  							if (dirBool == 1){		// if clockwise
+								if (dirBool ==1){
+										steps = s8;
 										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_RESET);
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-													steps = s1;
-										}
-										else{		// if half step
-													steps = s8;
-										}
 								}
-								else{								// if ccw
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_RESET);
-										if (stepBool == 1){		// and full step
-													HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
-													steps = s5;
-										}
-										else{		// if half step
-													steps = s6;
-										}
+								else{
+										steps = s6;
+										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);
 								}
 								break;
 						case s8:
-  							if (dirBool == 1){		// if clockwise
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_SET);
-										steps = s1;				// can only go one step on both full and half step
+								if (dirBool ==1){ // if cw
+										if (stepBool ==1){	// if full step
+												steps = s6;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);	
+										}
+										else{				// cw half step
+												steps = s1;
+													
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+										}
 								}
-								else{								// if ccw
-										HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
-										steps = s7;
+								else{			// if ccw
+										if (stepBool ==1){	// if full step
+												steps = s2;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_10, GPIO_PIN_SET);
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, GPIO_PIN_RESET);	
+										}
+										else{				// ccw half step
+												steps = s7;
+												HAL_GPIO_WritePin(GPIOE, GPIO_PIN_12, GPIO_PIN_SET);
+										}
 								}
 								break;
-
 					}
 			__HAL_TIM_SET_COUNTER(htim, 0x0000);  
 }
